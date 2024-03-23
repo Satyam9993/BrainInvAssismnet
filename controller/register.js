@@ -1,6 +1,7 @@
 import User from "../model/User.js";
 import ErrorHandler from "../util/errorHandler.js";
 import { generateRandomNumber } from "../util/getRandomNumber.js";
+import { sendMail } from "../util/sendMail.js";
 import { upLoadImage } from "../util/uploadImage.js";
 import bcrypt from 'bcryptjs';
 
@@ -22,22 +23,37 @@ export const registerUser = async (req, res, next) => {
         const imageUrl = await upLoadImage(file);
 
         const encryptedPassword = await bcrypt.hash(password, 10);
-
+        const otp = generateRandomNumber();
         const user = await User.create({
             name,
             email,
             password : encryptedPassword,
             profilePicture : imageUrl,
-            otp : generateRandomNumber()
+            otp : otp
         });
-
-        res.status(201).json({
-            success: true,
-            email : user.email,
-            message : "Otp has been sent to your email address"
-        });
+        const data = {
+            user: {
+                name: user.name
+            },
+            activationCode : otp
+        }
+        // const html = await ejs.renderFile(path.join(__dirname, "../mails/activation-mail.ejs"));
+        try {
+            await sendMail({
+                email: user.email,
+                subject: 'Activate your account',
+                template: 'activation-mail.ejs',
+                data
+            });
+            res.status(201).json({
+                success: true,
+                message: `Please check your email : ${user.email} to activate your account.`,
+            })
+        } catch (error) {
+            return next(new ErrorHandler(error.message, 400));
+        }
     } catch (error) {
-        next(ErrorHandler(error.message, 400));
+        next(new ErrorHandler(error.message, 400));
     }
 };
 
@@ -62,6 +78,6 @@ export const verifyOtp = async (req, res, next) => {
         });
 
     } catch (error) {
-        next(ErrorHandler(error.message, 400));
+        next(new ErrorHandler(error.message, 400));
     }
 }
