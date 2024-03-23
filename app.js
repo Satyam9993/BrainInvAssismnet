@@ -2,6 +2,8 @@ import express from 'express';
 import cors from 'cors';
 import { ErrorMiddleware } from './middleware/error.js';
 import getRoutes from './routes/index.js';
+
+// express app
 const app = express();
 
 
